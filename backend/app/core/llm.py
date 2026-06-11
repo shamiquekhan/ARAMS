@@ -27,17 +27,21 @@ class CloudflareLLM:
             "Authorization": f"Bearer {self.api_token}",
             "cf-aig-gateway-id": "default",
         }
-        body = {"model": self.model, "messages": messages, "max_tokens": 4096}
+        body = {"model": self.model, "messages": messages, "max_tokens": 32768}
         if self.format_json:
             body["response_format"] = {"type": "json_object"}
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=300.0) as client:
             try:
                 resp = await client.post(f"{self._base_url()}/chat/completions", headers=headers, json=body)
                 resp.raise_for_status()
             except httpx.TimeoutException:
-                raise TimeoutError(f"Cloudflare LLM timed out after 120s (model={self.model})")
+                raise TimeoutError(f"Cloudflare LLM timed out after 300s (model={self.model})")
             data = resp.json()
-            output_text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            raw_content = data.get("choices", [{}])[0].get("message", {}).get("content") or ""
+            if not raw_content:
+                import logging
+                logging.getLogger("arams.llm").warning(f"Cloudflare empty content: {json.dumps(data)[:500]}")
+            output_text = raw_content.strip()
             return LLMResponse(output_text)
 
     def invoke(self, prompt: str) -> Any:

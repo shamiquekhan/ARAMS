@@ -61,7 +61,7 @@ class ReportWriterAgent:
         )
 
         try:
-            response = await asyncio.wait_for(self.llm.ainvoke(prompt), timeout=120)
+            response = await asyncio.wait_for(self.llm.ainvoke(prompt), timeout=300)
             report = response.content.strip()
             if not report or len(report) < 50:
                 report = f"# Research Report: {query}\n\nResearch could not retrieve sufficient data for this query."
