@@ -45,7 +45,7 @@ async def run_research_pipeline_async(task_id: str, query: str):
             "human_approved": False,
         }
 
-        final_state = await asyncio.wait_for(graph.ainvoke(initial_state), timeout=300)
+        final_state = await asyncio.wait_for(graph.ainvoke(initial_state), timeout=600)
 
         _tasks_db[task_id]["status"] = final_state.get("status", "complete")
         _tasks_db[task_id]["iteration_count"] = final_state.get("iteration_count", 0)
