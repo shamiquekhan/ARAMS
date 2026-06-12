@@ -38,6 +38,14 @@ function getAgentStatus(agentIndex: number, currentPhase: number, isFailed: bool
   return { label: "Waiting", cls: "status-waiting", showSpinner: false };
 }
 
+function AgentAvatar({ color = "var(--color-primary)" }: { color?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  );
+}
+
 export default function ResearchTaskPage() {
   const params = useParams();
   const router = useRouter();
@@ -61,7 +69,14 @@ export default function ResearchTaskPage() {
   if (loading && !task) {
     return (
       <div className="welcome">
-        <div className="welcome-logo">A</div>
+        <div className="welcome-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="2" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <line x1="4.9" y1="4.9" x2="19.1" y2="19.1" />
+            <line x1="19.1" y1="4.9" x2="4.9" y2="19.1" />
+          </svg>
+        </div>
         <div className="welcome-title">Loading research task...</div>
         <div className="welcome-sub">
           <div className="spinner" style={{ margin: "20px auto", width: "20px", height: "20px", borderWidth: "2px" }}></div>
@@ -73,8 +88,8 @@ export default function ResearchTaskPage() {
   if (error) {
     return (
       <div className="welcome">
-        <div className="welcome-title" style={{ color: "var(--red)" }}>Error</div>
-        <div className="welcome-sub" style={{ color: "var(--red)" }}>{error}</div>
+        <div className="welcome-title" style={{ color: "var(--color-error)" }}>Error</div>
+        <div className="welcome-sub" style={{ color: "var(--color-error)" }}>{error}</div>
         <button className="new-research-btn" style={{ width: "auto" }} onClick={() => router.push("/research/new")}>
           Start New Research
         </button>
@@ -99,7 +114,6 @@ export default function ResearchTaskPage() {
 
   return (
     <>
-      {/* Topbar */}
       <div className="chat-topbar">
         <div className="chat-topic">{task.query}</div>
         <div className="topbar-actions">
@@ -112,21 +126,16 @@ export default function ResearchTaskPage() {
         </div>
       </div>
 
-      {/* Messages */}
       <div className="messages">
         <div className="msg-wrap">
 
-          {/* User message */}
           <div className="msg-user">
             <div className="msg-user-bubble">{task.query}</div>
           </div>
 
-          {/* Agent progress */}
           <div className="msg-agent">
             <div className="agent-avatar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a89cff" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+              <AgentAvatar />
             </div>
             <div className="agent-body">
               <div className="agent-name-row">
@@ -137,7 +146,7 @@ export default function ResearchTaskPage() {
               </div>
               <div className="agent-progress">
                 <div className="progress-header">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-on-dark-soft)" strokeWidth="2">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                   </svg>
                   <span className="progress-title">Agent Pipeline</span>
@@ -160,7 +169,7 @@ export default function ResearchTaskPage() {
                   <div className="confidence-bar-wrap">
                     <div className="confidence-bar-label">
                       <span>Research confidence</span>
-                      <span style={{ color: "var(--green)" }}>{Math.round(confidence * 100)}%</span>
+                      <span style={{ color: "var(--color-success)" }}>{Math.round(confidence * 100)}%</span>
                     </div>
                     <div className="confidence-bar-track">
                       <div className="confidence-bar-fill" style={{ width: `${Math.round(confidence * 100)}%` }}></div>
@@ -171,7 +180,6 @@ export default function ResearchTaskPage() {
             </div>
           </div>
 
-          {/* Divider when complete */}
           {isComplete && (
             <div className="divider-label">
               <div className="divider-line"></div>
@@ -180,13 +188,10 @@ export default function ResearchTaskPage() {
             </div>
           )}
 
-          {/* Report output */}
           {(isComplete && reportData) && (
             <div className="msg-agent">
               <div className="agent-avatar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a89cff" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
+                <AgentAvatar />
               </div>
               <div className="agent-body">
                 <div className="agent-name-row">
@@ -217,13 +222,10 @@ export default function ResearchTaskPage() {
             </div>
           )}
 
-          {/* Empty state - complete but no report */}
           {(isComplete && !reportData && !reportError) && (
             <div className="msg-agent">
               <div className="agent-avatar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a89cff" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
+                <AgentAvatar />
               </div>
               <div className="agent-body">
                 <div className="agent-content">
@@ -233,17 +235,14 @@ export default function ResearchTaskPage() {
             </div>
           )}
 
-          {/* Failed state */}
           {isFailed && (
             <div className="msg-agent">
               <div className="agent-avatar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
+                <AgentAvatar color="var(--color-error)" />
               </div>
               <div className="agent-body">
                 <div className="agent-name-row">
-                  <span className="agent-name" style={{ color: "var(--red)" }}>Research Failed</span>
+                  <span className="agent-name" style={{ color: "var(--color-error)" }}>Research Failed</span>
                 </div>
                 <div className="agent-content">
                   <p>The research task encountered an error. Please try again.</p>

@@ -50,4 +50,7 @@ Output:
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
 
-        return json.loads(content)
+        parsed = json.loads(content)
+        if isinstance(parsed, dict) and "confidence_score" in parsed:
+            parsed["confidence_score"] = max(0.0, min(1.0, float(parsed["confidence_score"])))
+        return parsed

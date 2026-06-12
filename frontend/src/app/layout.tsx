@@ -6,6 +6,17 @@ import { getHistory } from "@/lib/api";
 import type { ResearchTask } from "@/types";
 import "./globals.css";
 
+function SpikeMark() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="12" y1="2" x2="12" y2="22" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <line x1="4.9" y1="4.9" x2="19.1" y2="19.1" />
+      <line x1="19.1" y1="4.9" x2="4.9" y2="19.1" />
+    </svg>
+  );
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,10 +36,6 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-      </head>
       <body>
         <div className="window-shell">
           <div className="titlebar">
@@ -38,7 +45,9 @@ export default function RootLayout({
               <div className="dot max"></div>
             </div>
             <div className="titlebar-center">
-              <div className="titlebar-logo">A</div>
+              <div className="spike-mark" style={{ color: "var(--color-ink)" }}>
+                <SpikeMark />
+              </div>
               <span className="titlebar-name">AMARS</span>
             </div>
           </div>
@@ -65,7 +74,7 @@ export default function RootLayout({
               <div className="history-list">
                 {history.length === 0 && (
                   <div className="history-item">
-                    <div className="history-title" style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                    <div className="history-title" style={{ color: "var(--color-muted-soft)", fontSize: "11px" }}>
                       No research yet
                     </div>
                   </div>

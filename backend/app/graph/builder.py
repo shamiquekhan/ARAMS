@@ -1,10 +1,13 @@
 from langgraph.graph import StateGraph, END
 from app.graph.state import ResearchState
+from app.agents.research import run_subtasks
+from app.agents.source_evaluator import SourceEvaluatorAgent
 import asyncio
 import logging
 import re
 from datetime import datetime
 from app.core.config import settings
+from app.core.llm import get_llm
 
 logger = logging.getLogger("arams.graph")
 
@@ -27,17 +30,13 @@ def _get_agents():
     global _agents
     if not _agents:
         from app.agents.supervisor import SupervisorAgent
-        from app.agents.research import ResearchAgent
         from app.agents.fact_checker import FactCheckingAgent
-        from app.agents.source_evaluator import SourceEvaluationAgent
         from app.agents.reflection import ReflectionAgent
         from app.agents.synthesis import SynthesisAgent
         from app.agents.report_writer import ReportWriterAgent
         from app.agents.memory import MemoryAgent
         _agents["supervisor"] = SupervisorAgent()
-        _agents["research"] = ResearchAgent()
         _agents["fact_checker"] = FactCheckingAgent()
-        _agents["source_evaluator"] = SourceEvaluationAgent()
         _agents["reflection"] = ReflectionAgent()
         _agents["synthesis"] = SynthesisAgent()
         _agents["report_writer"] = ReportWriterAgent()
@@ -79,54 +78,39 @@ async def supervisor_node(state: ResearchState) -> ResearchState:
     return state
 
 async def research_node(state: ResearchState) -> ResearchState:
-    agents = _get_agents()
     tid = state["task_id"]
-    subtasks = state["subtasks"]
-    memory_str = str(state.get("memory", []))[:2000]
-    _update_task(tid, status="running")
-    logger.info(f"[{tid}] research_node: executing {len(subtasks)} subtasks")
-    await _rate_limit_delay()
-    tasks = [agents["research"].execute(st, memory_context=memory_str) for st in subtasks]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    state["status"] = "researching"
+    _update_task(tid, status="researching")
 
-    findings = []
-    for i, r in enumerate(results):
-        if isinstance(r, Exception):
-            logger.warning(f"[{tid}] research_node subtask {i} failed: {r}")
-            continue
-        findings.extend(r)
+    findings = await run_subtasks(
+        subtasks=state.get("subtasks", [{"description": state["query"]}]),
+        original_query=state["query"]
+    )
 
-    SPAM_DOMAINS = {"customeranalytics.com.au", "deeplearningdaily.com"}
-    seen_urls = set()
-    deduped = []
-    for f in findings:
-        url = f.get("url", "")
-        domain = url.split("/")[2] if "//" in url else ""
-        if url and url not in seen_urls and domain not in SPAM_DOMAINS:
-            seen_urls.add(url)
-            deduped.append(f)
-    state["raw_findings"] = deduped
+    state["raw_findings"] = findings
+    _update_task(tid, raw_findings=findings)
     state["iteration_count"] = state.get("iteration_count", 0) + 1
-    _update_task(tid, iteration_count=state["iteration_count"])
-    logger.info(f"[{tid}] research_node: done, {len(findings)} findings, iteration {state['iteration_count']}")
+    logger.info(f"[{tid}] research_node done — {len(findings)} findings, iteration {state['iteration_count']}")
     return state
 
 async def source_eval_node(state: ResearchState) -> ResearchState:
-    agents = _get_agents()
     tid = state["task_id"]
-    state["status"] = "source_evaluating"
-    _update_task(tid, status="source_evaluating")
-    logger.info(f"[{tid}] source_eval_node")
-    sources = [{"url": f.get("url", ""), "domain": f.get("url", "").split("/")[2] if "//" in f.get("url", "") else "", "published_date": f.get("published_date")} for f in state.get("raw_findings", [])]
-    state["source_scores"] = agents["source_evaluator"].evaluate_batch(sources)
+    state["status"] = "evaluating_sources"
+    _update_task(tid, status="evaluating_sources")
 
-    # Drop off-topic sources whose content has zero keyword overlap with the query
     findings = state.get("raw_findings", [])
-    filtered = agents["source_evaluator"].filter_relevant(findings, state["query"])
-    before = len(findings)
-    state["raw_findings"] = filtered
-    if len(filtered) < before:
-        logger.info(f"[{tid}] source_eval_node: filtered {before - len(filtered)} off-topic findings ({before} -> {len(filtered)})")
+    logger.info(f"[{tid}] source_eval_node — {len(findings)} raw findings")
+
+    if findings:
+        agent = SourceEvaluatorAgent()
+        filtered = await agent.evaluate(
+            query=state["query"],
+            findings=findings
+        )
+        state["raw_findings"] = filtered
+        _update_task(tid, raw_findings=filtered)
+        logger.info(f"[{tid}] source_eval done — {len(filtered)} relevant findings kept")
+
     return state
 
 async def fact_check_node(state: ResearchState) -> ResearchState:
@@ -147,15 +131,17 @@ async def fact_check_node(state: ResearchState) -> ResearchState:
             verified.append({**f, "verified": result})
         except Exception:
             verified.append({**f, "verified": {"verified": True, "confidence": 0.5, "contradictions": []}})
-    unverified = [f for f in findings if f not in verified]
+    verified_urls = {v.get("url") for v in verified}
+    unverified = [f for f in findings if f.get("url") not in verified_urls]
     seen = set()
-    merged = []
+    deduped = []
     for f in verified + unverified:
         url = f.get("url", "")
         if url and url not in seen:
             seen.add(url)
-            merged.append(f)
-    state["verified_findings"] = merged
+            deduped.append(f)
+    state["verified_findings"] = deduped
+    _update_task(tid, verified_findings=state["verified_findings"])
     logger.info(f"[{tid}] verified_findings count: {len(state.get('verified_findings', []))}")
     return state
 
@@ -175,9 +161,9 @@ def _topic_coherence_penalty(query: str, findings: list) -> float:
             overlap += 1
     total = max(len(findings), 1)
     if overlap == 0:
-        return 0.0
+        return 0.1
     coverage = overlap / total
-    return min(1.0, 0.5 + coverage * 0.4)
+    return max(0.1, min(1.0, 0.5 + coverage * 0.4))
 
 async def reflection_node(state: ResearchState) -> ResearchState:
     agents = _get_agents()

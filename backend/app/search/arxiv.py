@@ -23,6 +23,13 @@ class ArXivTool:
             "dimensionality reduction", "feature extraction",
             "cross-validation", "overfitting", "underfitting",
         ]
+        self._materials_keywords = [
+            "battery", "solid-state", "electrolyte", "cathode", "anode",
+            "semiconductor", "photovoltaic", "solar cell", "superconductor",
+            "superconductivity", "dielectric", "thermoelectric", "perovskite",
+            "nanowire", "quantum dot", "thin film", "metamaterial",
+            "electrocatalyst", "fuel cell", "bandgap", "doping",
+        ]
 
     @property
     def client(self):
@@ -34,6 +41,8 @@ class ArXivTool:
             return f"(cat:cs.CL OR cat:cs.AI) AND ({user_query})"
         if any(kw in q for kw in self._ml_keywords):
             return f"(cat:cs.LG OR cat:cs.AI) AND ({user_query})"
+        if any(kw in q for kw in self._materials_keywords):
+            return f"(cat:cond-mat.mtrl-sci OR cat:cond-mat.supr-con) AND ({user_query})"
         return user_query
 
     async def search(self, query: str, max_results: int = 5) -> List[Dict]:

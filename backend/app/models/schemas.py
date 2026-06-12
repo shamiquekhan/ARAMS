@@ -19,6 +19,8 @@ class TaskDetailResponse(BaseModel):
     confidence_score: Optional[float] = None
     error_message: Optional[str] = None
     report: Optional[str] = None
+    raw_findings: List[Dict[str, Any]] = []
+    verified_findings: List[Dict[str, Any]] = []
     findings_count: Optional[int] = None
     created_at: datetime
     completed_at: Optional[datetime] = None

@@ -30,19 +30,63 @@ class CloudflareLLM:
         body = {"model": self.model, "messages": messages, "max_tokens": 32768}
         if self.format_json:
             body["response_format"] = {"type": "json_object"}
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            try:
+
+        # Try Cloudflare first
+        cf_ok = False
+        try:
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 resp = await client.post(f"{self._base_url()}/chat/completions", headers=headers, json=body)
                 resp.raise_for_status()
-            except httpx.TimeoutException:
-                raise TimeoutError(f"Cloudflare LLM timed out after 300s (model={self.model})")
-            data = resp.json()
-            raw_content = data.get("choices", [{}])[0].get("message", {}).get("content") or ""
-            if not raw_content:
-                import logging
-                logging.getLogger("arams.llm").warning(f"Cloudflare empty content: {json.dumps(data)[:500]}")
-            output_text = raw_content.strip()
-            return LLMResponse(output_text)
+                data = resp.json()
+                raw_content = data.get("choices", [{}])[0].get("message", {}).get("content") or ""
+                if raw_content:
+                    return LLMResponse(raw_content.strip())
+                cf_ok = True  # response parsed but empty
+        except httpx.TimeoutException:
+            logger.warning("Cloudflare LLM timed out")
+        except httpx.HTTPStatusError as e:
+            body_text = e.response.text[:300] if e.response else str(e)
+            logger.warning(f"Cloudflare LLM failed ({e.response.status_code}): {body_text}")
+
+        if cf_ok:
+            fail_reason = "Cloudflare returned empty content"
+        else:
+            fail_reason = "Cloudflare quota exhausted or unavailable"
+
+        # Fallback: try OpenAI gateway
+        e2 = None
+        try:
+            keys = []
+            if settings.OPENAI_API_KEY:
+                keys.append(settings.OPENAI_API_KEY)
+            keys.extend([k.strip() for k in settings.OPENAI_API_KEYS.split(",") if k.strip()])
+            if keys:
+                from langchain_openai import ChatOpenAI
+                oai = ChatOpenAI(
+                    model=settings.OPENAI_MODEL or "gemini-2.5-flash",
+                    api_key=keys[0],
+                    base_url=settings.OPENAI_BASE_URL,
+                    model_kwargs={"response_format": {"type": "json_object"}} if self.format_json else None
+                )
+                response = await oai.ainvoke(prompt)
+                text = response.content if hasattr(response, 'content') else str(response)
+                return LLMResponse(text.strip())
+        except Exception as e2:
+            logger.warning(f"OpenAI fallback failed: {e2}")
+
+        # Final fallback: Ollama
+        try:
+            from langchain_ollama import ChatOllama
+            ollama = ChatOllama(
+                model=settings.LLM_MODEL,
+                base_url=settings.OLLAMA_BASE_URL,
+                format="json" if self.format_json else None
+            )
+            response = await ollama.ainvoke(prompt)
+            text = response.content if hasattr(response, 'content') else str(response)
+            return LLMResponse(text.strip())
+        except Exception as e3:
+            raise RuntimeError(f"All LLM backends failed. CF: {fail_reason}, OpenAI: {e2}, Ollama: {e3}")
 
     def invoke(self, prompt: str) -> Any:
         import asyncio
@@ -224,7 +268,7 @@ def get_llm(model: Optional[str] = None, format_json: bool = False, prefer_fast:
         try:
             from langchain_ollama import ChatOllama
             return ChatOllama(
-                model=model or settings.LLM_MODEL,
+                model=settings.LLM_MODEL,
                 base_url=settings.OLLAMA_BASE_URL,
                 format="json" if format_json else None
             )
@@ -236,7 +280,7 @@ def get_llm(model: Optional[str] = None, format_json: bool = False, prefer_fast:
         return GrokLLM(model=model)
     from langchain_ollama import ChatOllama
     return ChatOllama(
-        model=model or settings.LLM_MODEL,
+        model=settings.LLM_MODEL,
         base_url=settings.OLLAMA_BASE_URL,
         format="json" if format_json else None
     )

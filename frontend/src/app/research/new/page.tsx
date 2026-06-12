@@ -11,7 +11,6 @@ export default function NewResearchPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Focus the textarea on mount
     const ta = document.querySelector("textarea");
     if (ta) ta.focus();
   }, []);
@@ -32,7 +31,14 @@ export default function NewResearchPage() {
 
   return (
     <div className="welcome">
-      <div className="welcome-logo">A</div>
+      <div className="welcome-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="2" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <line x1="4.9" y1="4.9" x2="19.1" y2="19.1" />
+          <line x1="19.1" y1="4.9" x2="4.9" y2="19.1" />
+        </svg>
+      </div>
       <div className="welcome-title">Start New Research</div>
       <div className="welcome-sub">
         Enter a query to start a new multi-agent research session.
@@ -40,9 +46,9 @@ export default function NewResearchPage() {
 
       {error && (
         <div style={{
-          background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
+          background: "rgba(198,69,69,0.08)", border: "1px solid rgba(198,69,69,0.25)",
           borderRadius: "var(--radius-md)", padding: "12px 16px", marginBottom: "20px",
-          maxWidth: "540px", width: "100%", fontSize: "13px", color: "var(--red)"
+          maxWidth: "540px", width: "100%", fontSize: "13px", color: "var(--color-error)"
         }}>
           {error}
         </div>
@@ -68,7 +74,7 @@ export default function NewResearchPage() {
               className="send-btn"
               disabled={loading || !query.trim()}
               onClick={() => handleSubmit()}
-              style={{ width: "auto", padding: "0 16px", borderRadius: "9px", gap: "6px" }}
+              style={{ width: "auto", padding: "0 16px", borderRadius: "var(--radius-md)", gap: "6px" }}
             >
               {loading ? "Starting..." : "Run Research"}
             </button>

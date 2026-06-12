@@ -43,7 +43,14 @@ export default function Home() {
 
   return (
     <div className="welcome">
-      <div className="welcome-logo">A</div>
+      <div className="welcome-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="2" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <line x1="4.9" y1="4.9" x2="19.1" y2="19.1" />
+          <line x1="19.1" y1="4.9" x2="4.9" y2="19.1" />
+        </svg>
+      </div>
       <div className="welcome-title">What do you want to research?</div>
       <div className="welcome-sub">
         Ask anything. AMARS deploys 8 specialized agents to search, verify, and synthesize a cited research report.
