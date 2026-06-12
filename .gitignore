@@ -1,22 +1,69 @@
+# --- Environment ---
 .env
 .env.*
-chroma_db/
+!.env.example
+
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.egg-info/
+.venv/
+venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-*.egg-info/
-dist/
-build/
-.venv/
-venv/
+.coverage
+htmlcov/
+
+# --- Node ---
 node_modules/
 .next/
-*.db
-*.sqlite3
+out/
+dist/
+
+# --- IDE / Editor ---
 .vscode/
 .idea/
-*.log
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- Build Artifacts ---
+build/
+dist/
+*.egg-info/
+
+# --- Logs ---
+*.log
+
+# --- Secrets / Certificates ---
+*.pem
+*.key
+*.crt
+*.cert
+
+# --- Database ---
+*.db
+*.sqlite3
+chroma_db/
+
+# --- Docker ---
+.docker/
+
+# --- Next.js ---
+.next/
+out/
+
+# --- Project-specific ---
+backend/.venv/
+frontend/.next/
+frontend/node_modules/
